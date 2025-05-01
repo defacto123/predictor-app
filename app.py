@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 import pickle
 from scipy.stats import poisson
+from math import ceil, floor
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -47,6 +48,7 @@ class TeamScorePredictor:
     def preprocess_data(self, dataset):
         dataset['Date'] = pd.to_datetime(dataset['Date'], format='%Y%m%d')
         dataset = dataset.sort_values('Date')
+
         all_teams = set(dataset['HomeTeam']).union(set(dataset['AwayTeam']))
         self.team_encoder = {team: i for i, team in enumerate(all_teams)}
 
@@ -104,14 +106,14 @@ class TeamScorePredictor:
             self.team_stats[home_team]['dates'].append(row['Date'])
             self.team_stats[away_team]['dates'].append(row['Date'])
             self.team_stats[home_team]['home_scores'].append(row['HomeActualScore'])
-            self.team_stats[away_team]['away_scores'].append(row['AwayActualScore'])
+            self.team_stats[away_team]['away_scores'].append(row['HomeActualScore'])
             self.team_stats[home_team]['conf_scores'][row['AwayConference']].append(row['HomeActualScore'])
             self.team_stats[away_team]['conf_scores'][row['HomeConference']].append(row['AwayActualScore'])
             self.team_stats[home_team]['win_prob'].append(row['HomeWinProbability'])
             self.team_stats[away_team]['win_prob'].append(row['AwayWinProbability'])
 
-            self.head_to_head[match_id]['home_scores'].append(row['HomeMean'])
-            self.head_to_head[match_id]['away_scores'].append(row['AwayMean'])
+            self.head_to_head[match_id]['home_scores'].append(row['HomeActualScore'])
+            self.head_to_head[match_id]['away_scores'].append(row['AwayActualScore'])
 
             self.conference_stats[row['HomeConference']].append(row['HomeConfPower'])
             self.conference_stats[row['AwayConference']].append(row['AwayConfPower'])
@@ -147,8 +149,12 @@ class TeamScorePredictor:
         for conf in self.conference_power_trends:
             if len(self.conference_power_trends[conf]['dates']) > 1:
                 x = np.array([(d - self.conference_power_trends[conf]['dates'][0]).days for d in self.conference_power_trends[conf]['dates']])
+                x = x - x[0]
                 y = np.array(self.conference_power_trends[conf]['power'])
-                self.conference_power_trends[conf]['trend'] = np.polyfit(x, y, 1)[0]
+                if len(x) > 1 and np.std(x) > 0:
+                    self.conference_power_trends[conf]['trend'] = np.polyfit(x, y, 1)[0]
+                else:
+                    self.conference_power_trends[conf]['trend'] = 0
                 self.conference_power_trends[conf]['std'] = np.std(self.conference_power_trends[conf]['power'])
             else:
                 self.conference_power_trends[conf]['trend'] = 0
@@ -218,9 +224,12 @@ class TeamScorePredictor:
         return round(1 / prob, 2)
 
     def determine_total_line(self, total_mean):
-        if total_mean == int(total_mean):
-            return total_mean - 0.5
-        return round(total_mean * 2) / 2
+        if abs(total_mean - round(total_mean)) < 1e-10:
+            return float(round(total_mean) - 0.5)
+        nearest_integer = round(total_mean)
+        if total_mean >= nearest_integer:
+            return float(nearest_integer + 0.5)
+        return float(nearest_integer - 0.5)
 
     def calculate_over_under_probabilities(self, total_mean):
         total_line = self.determine_total_line(total_mean)
@@ -276,11 +285,9 @@ class TeamScorePredictor:
                 'HomeMean': float(adjusted_home),
                 'AwayMean': float(adjusted_away)
             },
-            'WinProbabilities': {
-                'HomeWinProbability': float(home_moneyline * 100),
-                'AwayWinProbability': float(away_moneyline * 100)
-            },
             'MoneyLine': {
+                'HomeWinProbability': float(home_moneyline),
+                'AwayWinProbability': float(away_moneyline),
                 'HomeDecimalOdds': float(home_decimal_odds),
                 'AwayDecimalOdds': float(away_decimal_odds)
             },
@@ -360,14 +367,15 @@ def predict_score():
                     return render_template('index.html', error=f"Prediction failed. One or both teams not found in the dataset.", 
                                          home_team=home_team, away_team=away_team)
                 logger.info(f"Prediction result: {result}")
+                # Format prediction to match index.html expectations
                 prediction = {
                     'PredictedMeans': {
                         'home_mean': f"{result['PredictedMeans']['HomeMean']:.2f}",
                         'away_mean': f"{result['PredictedMeans']['AwayMean']:.2f}"
                     },
                     'WinProbabilities': {
-                        'home_win_probability': f"{result['WinProbabilities']['HomeWinProbability']:.2f}",
-                        'away_win_probability': f"{result['WinProbabilities']['AwayWinProbability']:.2f}"
+                        'home_win_probability': f"{result['MoneyLine']['HomeWinProbability'] * 100:.2f}",
+                        'away_win_probability': f"{result['MoneyLine']['AwayWinProbability'] * 100:.2f}"
                     },
                     'MoneyLine': {
                         'home_decimal_odds': f"{result['MoneyLine']['HomeDecimalOdds']:.2f}",
