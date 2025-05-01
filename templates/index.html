@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Score Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        label {
+            font-size: 16px;
+            color: #555;
+            text-align: left;
+        }
+        .select2-container {
+            width: 100% !important;
+        }
+        .select2-container--default .select2-selection--single {
+            height: 42px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .prediction {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-radius: 5px;
+            color: #2e7d32;
+            font-size: 16px;
+            text-align: left;
+        }
+        .prediction h3 {
+            margin-top: 0;
+            font-size: 18px;
+            color: #1b5e20;
+        }
+        .prediction p {
+            margin: 5px 0;
+        }
+        .error {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ffebee;
+            border-radius: 5px;
+            color: #c62828;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Team Score Predictor</h1>
+        <form method="POST" action="/">
+            <label for="home_team">Home Team</label>
+            <select id="home_team" name="home_team" required>
+                <option value="">Select Home Team</option>
+            </select>
+            
+            <label for="away_team">Away Team</label>
+            <select id="away_team" name="away_team" required>
+                <option value="">Select Away Team</option>
+            </select>
+            
+            <button type="submit">Predict</button>
+        </form>
+        {% if prediction %}
+            <div class="prediction">
+                <h3>Prediction Results</h3>
+                <p><strong>{{ home_team }}</strong> Predicted Mean: {{ prediction.PredictedMeans.home_mean }}</p>
+                <p><strong>{{ away_team }}</strong> Predicted Mean: {{ prediction.PredictedMeans.away_mean }}</p>
+                <h3>MoneyLine Odds</h3>
+                <p>{{ home_team }} Decimal Odds: {{ prediction.MoneyLine.home_decimal_odds }}</p>
+                <p>{{ away_team }} Decimal Odds: {{ prediction.MoneyLine.away_decimal_odds }}</p>
+                <h3>Over/Under</h3>
+                <p>Total Line: {{ prediction.OverUnder.total_line }}</p>
+                <p>Over Probability: {{ prediction.OverUnder.over_probability_percent }}%</p>
+                <p>Under Probability: {{ prediction.OverUnder.under_probability_percent }}%</p>
+                <p>Over Decimal Odds: {{ prediction.OverUnder.over_decimal_odds }}</p>
+                <p>Under Decimal Odds: {{ prediction.OverUnder.under_decimal_odds }}</p>
+            </div>
+        {% endif %}
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const teams = [
+                "North Carolina", "Florida St", "Florida", "Clemson", "LSU", "Oregon St", "Arkansas", "Georgia",
+                "Oklahoma", "Texas", "Alabama", "Vanderbilt", "Auburn", "Oklahoma St", "Coastal Car", "Oregon",
+                "Virginia", "Texas A&M", "Mississippi", "UC Irvine", "West Virginia", "Troy", "UC Santa Barbara",
+                "Kentucky", "UCLA", "Miami FL", "Kansas", "Stanford", "Virginia Tech", "Southern Miss", "Wake Forest",
+                "Arizona", "USC", "Dallas Bap", "TCU", "Mississippi St", "Hawaii", "Kansas St", "Georgia Tech",
+                "Murray St", "Xavier", "Utah", "FL Atlantic", "Notre Dame", "Arizona St", "South Carolina", "ETSU",
+                "Penn St", "Louisville", "Purdue", "St Mary's CA", "Duke", "Minnesota", "Grand Canyon", "UTRGV",
+                "UNC Wilmington", "Houston", "Liberty", "UCF", "Michigan", "Col Charleston", "Wofford", "East Carolina",
+                "Cincinnati", "Illinois", "Northeastern", "Creighton", "UNC Greensboro", "Texas Tech", "Michigan St",
+                "S Illinois", "California", "Tulane", "UAB", "McNeese St", "Nebraska", "Lamar", "NC State", "BYU",
+                "Pittsburgh", "UC San Diego", "San Jose St", "UT San Antonio", "Baylor", "Texas St", "Indiana",
+                "High Point", "Cal Poly", "South Florida", "Maryland", "Jacksonville St", "Connecticut", "Stetson",
+                "Santa Clara", "UC Davis", "Ga Southern", "Louisiana", "SE Louisiana", "Georgia St", "WKU", "Washington",
+                "Richmond", "Rutgers", "UNLV", "Fresno St", "Mercer", "Louisiana Tech", "Charlotte", "Samford",
+                "Boston College", "Fairfield", "Indiana St", "Campbell", "Iowa", "Oral Roberts", "Austin Peay",
+                "Florida Intl", "New Orleans", "Loy Marymount", "FGCU", "SC Upstate", "Toledo", "South Alabama",
+                "Ohio St", "Old Dominion", "Long Beach St", "CS Northridge", "Wichita St", "Nevada", "New Mexico",
+                "Missouri", "Memphis", "Missouri St", "Portland", "UT Arlington", "NE Omaha", "James Madison",
+                "George Mason", "Delaware", "Miami OH", "Morehead St", "Ball St", "CS Fullerton", "Marshall",
+                "Washington St", "St Thomas MN", "G Washington", "Bowling Green", "Charleston So", "Houston Chr",
+                "Jacksonville", "Wright St", "Cal Baptist", "VMI", "Air Force", "Kennesaw", "Ark Little Rock",
+                "St Bonaventure", "San Diego", "W Carolina", "Utah Valley", "Nicholls St", "UC Riverside", "Villanova",
+                "San Francisco", "SE Missouri St", "West Georgia", "Rice", "St John's", "North Florida", "Tennessee Tech",
+                "Seton Hall", "St Louis", "CS Sacramento", "New Mexico St", "Rider", "Holy Cross", "Northwestern",
+                "Kent", "Lipscomb", "Appalachian St", "Winthrop", "Rhode Island", "Bucknell", "ULM", "VCU",
+                "N Illinois", "Elon", "TAM C. Christi", "San Diego St", "Georgetown", "Tarleton St", "Evansville",
+                "N Kentucky", "Gonzaga", "Dayton", "Southern Indiana", "Bryant", "MTSU", "Citadel", "Stony Brook",
+                "Abilene Chr", "Cornell", "Penn", "Belmont", "Monmouth NJ", "Incarnate Word", "TN Martin",
+                "Sam Houston St", "Pepperdine", "N Dakota St", "St Joseph's PA", "Army", "Quinnipiac", "Northwestern LA",
+                "North Alabama", "Columbia", "Illinois St", "Sacred Heart", "CS Bakersfield", "Binghamton", "Akron",
+                "Ohio", "Pacific", "Lindenwood", "Yale", "NJIT", "UNC Asheville", "IL Chicago", "E Michigan",
+                "William & Mary", "Presbyterian", "Oakland", "Hofstra", "Princeton", "Gardner Webb", "E Illinois",
+                "Utah Tech", "Central Conn", "N Colorado", "Arkansas St", "Lehigh", "Florida A&M", "Jackson St",
+                "Niagara", "W Michigan", "NC A&T", "Seattle", "Davidson", "Navy", "WI Milwaukee", "SF Austin",
+                "Southern Univ", "Radford", "Alabama St", "C Michigan", "Mt St Mary's", "Bethune-Cookman",
+                "Cent Arkansas", "LIU Brooklyn", "MA Lowell", "Valparaiso", "Massachusetts", "TX Southern", "Dartmouth",
+                "UMBC", "Butler", "SUNY Albany", "SIUE", "W Illinois", "Bradley", "Queens NC", "Fordham", "Maine",
+                "Canisius", "Towson", "PFW", "E Kentucky", "Longwood", "Manhattan", "S Dakota St", "Harvard",
+                "Lafayette", "Merrimack", "Youngstown St", "Bellarmine", "Wagner", "Marist", "Grambling", "Stonehill",
+                "St Peter's", "Le Moyne", "Siena", "Brown", "Prairie View", "F Dickinson", "Mercyhurst", "Alabama A&M",
+                "Iona", "Coppin St", "Delaware St", "MS Valley St", "MD E Shore", "Ark Pine Bluff", "Norfolk St",
+                "Alcorn St"
+            ];
+
+            function populateSelect(selectElement) {
+                teams.forEach(team => {
+                    const option = new Option(team, team);
+                    selectElement.append(option);
+                });
+            }
+
+            const homeSelect = $('#home_team');
+            const awaySelect = $('#away_team');
+            populateSelect(homeSelect);
+            populateSelect(awaySelect);
+
+            $('#home_team, #away_team').select2({
+                placeholder: "Select a team",
+                allowClear: true,
+                width: '100%'
+            });
+
+            function updateOptions() {
+                const homeValue = homeSelect.val();
+                const awayValue = awaySelect.val();
+
+                $('option', homeSelect).prop('disabled', false);
+                $('option', awaySelect).prop('disabled', false);
+
+                if (homeValue) {
+                    $(`option[value="${homeValue}"]`, awaySelect).prop('disabled', true);
+                }
+                if (awayValue) {
+                    $(`option[value="${awayValue}"]`, homeSelect).prop('disabled', true);
+                }
+
+                homeSelect.select2();
+                awaySelect.select2();
+            }
+
+            homeSelect.on('change', updateOptions);
+            awaySelect.on('change', updateOptions);
+        });
+    </script>
+</body>
+</html>
