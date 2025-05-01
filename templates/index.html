@@ -3,599 +3,376 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Score Predictor</title>
+    <title>College Baseball Odds Hub</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Replace Select2 with Tom Select CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Add Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4361ee',
+                        primaryDark: '#3a0ca3',
+                        secondary: '#4cc9f0',
+                        success: '#10b981',
+                        info: '#3b82f6',
+                        textPrimary: '#1e293b',
+                        textSecondary: '#64748b',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --primary-color: #4361ee;
-            --primary-dark: #3a0ca3;
-            --secondary-color: #4cc9f0;
-            --success-color: #10b981;
-            --info-color: #3b82f6;
-            --background-color: #f8fafc;
-            --card-background: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
-            --gradient-start: #4361ee;
-            --gradient-end: #4cc9f0;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            margin: 0;
-            /* Simple solid background as fallback */
-            background-color: var(--primary-dark);
-            /* Remove all complex gradient styling */
-        }
-
-        /* Add a fixed background div instead of using body */
-        .page-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            /* Match the button gradient exactly */
-            background: var(--primary-color);
-            background: -webkit-linear-gradient(315deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-            background: -moz-linear-gradient(315deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-            z-index: -2;
-        }
-        
-        /* Adjust overlay to be more subtle */
-        .page-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: -1;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1000px;
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 24px;
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3);
-            overflow: hidden;
-            position: relative;
-            z-index: 1;
-            backdrop-filter: blur(10px);
-            margin-top: -3rem;
-        }
-
-        .container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 6px;
-            background: var(--primary-color); /* Fallback solid color */
-            background-image: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
-        }
-
-        .header {
-            background: var(--primary-color); /* Fallback solid color */
-            background-image: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            color: white;
-            padding: 2.5rem 2rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
-            opacity: 0.5;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
-
-        .content {
-            padding: 3rem;
-            background: #ffffff; /* Fallback solid color */
-            background-image: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            position: relative;
-            z-index: 10;
-        }
-
-        .separator {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            padding: 0 0.5rem;
-            display: flex;
-            align-items: center;
-            margin-top: 1.5rem;
-        }
-
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            background: white;
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-            position: relative;
-        }
-
-        .teams-row {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .form-group {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        label {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .select2-container {
+        /* Professional Tom Select styling for betting company */
+        .ts-control {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            padding: 0 20px !important; /* Remove vertical padding, keep horizontal */
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+            background-color: #f8fafc !important;
+            min-height: 64px !important;
+            font-weight: 500 !important;
+            height: 64px !important; /* Fixed height to prevent shifting */
+            display: flex !important;
+            align-items: center !important;
             width: 100% !important;
         }
-
-        .select2-container--default .select2-selection--single {
-            height: 52px;
-            padding: 0.75rem 0 0.75rem 1rem;
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            background-color: var(--card-background);
-            transition: all 0.2s ease;
+        
+        /* Control container width */
+        .ts-wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 64px !important;
         }
-
-        .select2-container--default .select2-selection--single:hover {
-            border-color: var(--primary-color);
+        
+        /* Make dropdown always match the width of control */
+        .ts-dropdown {
+            width: 100% !important;
+            margin-top: 2px !important;
         }
-
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 50px;
-            width: 25px;
-            right: 5px;
+        
+        /* Clean, betting-focused styling for selected item */
+        .ts-wrapper.single .ts-control .item {
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            padding: 0 !important;
+            padding-left: 12px !important;
+            width: auto !important;
+            max-width: calc(100% - 40px) !important; 
+            margin: 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            background: transparent !important;
+            color: #1e293b !important;
+            box-shadow: none !important;
+            position: relative !important;
+            height: 100% !important;
+            line-height: 64px !important; /* Match the height of container for vertical centering */
         }
-
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 28px;
+        
+        /* Position the input field right after the selected item */
+        .ts-wrapper.single.has-items .ts-control > input {
+            position: relative !important;
+            left: auto !important;
+            display: inline-block !important;
+            margin-left: 8px !important;
+            width: auto !important;
+            min-width: 60px !important;
         }
-
-        .select2-container--default .select2-selection--single .select2-selection__clear {
-            margin-right: 24px;
-            font-weight: bold;
-            font-size: 16px;
-            color: var(--text-secondary);
+        
+        /* Make sure the input is visible even with selection */
+        .ts-wrapper.has-items .ts-control {
+            padding-left: 12px !important;
+            padding-right: 12px !important;
         }
-
-        .select2-selection__clear {
-            margin-right: 30px !important; 
-            font-size: 24px !important;
+        
+        /* Custom dropdown arrow */
+        .ts-wrapper.single .ts-control:after {
+            content: '' !important;
+            display: block !important;
+            position: absolute !important;
+            top: 50% !important;
+            right: 20px !important;
+            transform: translateY(-50%) !important;
+            width: 14px !important;
+            height: 14px !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234361ee'%3E%3Cpath d='M7 10l5 5 5-5H7z'/%3E%3C/svg%3E") !important;
+            background-size: contain !important;
+            background-repeat: no-repeat !important;
+            border: none !important;
+            pointer-events: none !important;
+            z-index: 2 !important;
         }
-
-        #predict-button {
-            background: var(--primary-color); /* Fallback solid color */
-            background-image: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            color: white;
-            padding: 1rem 2rem;
-            font-size: 1rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        
+        /* Professional input style */
+        .ts-control > input {
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            color: #1e293b !important;
+            min-height: 32px !important;
+            position: static !important;
+            opacity: 1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100% !important;
+            line-height: 64px !important;
         }
-
-        #predict-button:hover {
-            filter: brightness(1.2);
+        
+        /* Wrapper adjustments for vertical centering */
+        .ts-wrapper {
+            height: 64px !important;
         }
-
-        .prediction {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.2);
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        
+        /* Improve placeholder positioning */
+        .ts-control > input::placeholder {
+            line-height: 64px !important;
+            vertical-align: middle !important;
         }
-
-        .prediction:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        
+        /* Ensure the input stays visible when items are selected */
+        .ts-wrapper.has-items .ts-control > input {
+            visibility: visible !important;
+            opacity: 1 !important;
+            margin-left: 8px !important;
+            position: relative !important;
+            left: auto !important;
         }
-
-        .prediction-header {
-            background: var(--primary-color); /* Fallback solid color */
-            background-image: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            color: white;
-            padding: 1rem;
-            font-size: 1.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            position: relative;
-            overflow: hidden;
+        
+        /* Hover and focus states */
+        .ts-control:hover {
+            border-color: #cbd5e1 !important;
+            background-color: #ffffff !important;
         }
-
-        .prediction-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
-            opacity: 0.5;
+        
+        .ts-control:focus-within {
+            border-color: #4361ee !important;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15) !important;
+            background-color: #ffffff !important;
         }
-
-        .prediction-content {
-            padding: 2.5rem;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+        
+        /* Dropdown styling for betting platform */
+        .ts-dropdown {
+            position: absolute !important;
+            top: 100% !important;
+            z-index: 10 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 5px 10px -5px rgba(15, 23, 42, 0.15) !important;
+            margin-top: 4px !important;
+            font-family: 'Inter', sans-serif !important;
+            padding: 8px !important;
+            overflow: hidden !important;
+            font-size: 15px !important;
+            background: #ffffff !important;
+            backdrop-filter: blur(10px) !important;
         }
-
-        .teams-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 3rem;
-            position: relative;
+        
+        /* Category header styling for team categories */
+        .ts-dropdown .optgroup-header {
+            padding: 8px 12px !important;
+            font-size: 11px !important;
+            text-transform: uppercase !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.05em !important;
+            color: #64748b !important;
+            background: transparent !important;
         }
-
-        .team-info {
-            flex: 1;
-            text-align: center;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 20px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
+        
+        /* Option styling */
+        .ts-dropdown .option {
+            padding: 12px 16px !important;
+            border-radius: 8px !important;
+            margin: 3px 0 !important;
+            font-weight: 500 !important;
+            color: #1e293b !important;
+            display: flex !important;
+            align-items: center !important;
+            position: relative !important;
+            cursor: pointer !important;
         }
-
-        .team-info:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        
+        /* Betting odds-like styling for active item */
+        .ts-dropdown .active {
+            background: #4361ee !important;
+            color: white !important;
+            box-shadow: 0 4px 8px -2px rgba(67, 97, 238, 0.25) !important;
         }
-
-        .team-name {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        
+        /* Hover state */
+        .ts-dropdown .option:hover:not(.active) {
+            background-color: #f1f5f9 !important;
         }
-
-        .expected-runs {
-            font-size: 3rem;
-            font-weight: 800;
-            background: var(--primary-color); /* Fallback color */
-            background-image: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+        
+        /* Scrollbar styling */
+        .ts-dropdown .ts-dropdown-content::-webkit-scrollbar {
+            width: 6px !important;
+        }
+        
+        .ts-dropdown .ts-dropdown-content::-webkit-scrollbar-track {
+            background: #f1f5f9 !important;
+            border-radius: 10px !important;
+        }
+        
+        .ts-dropdown .ts-dropdown-content::-webkit-scrollbar-thumb {
+            background: #cbd5e1 !important;
+            border-radius: 10px !important;
+        }
+        
+        .ts-dropdown .ts-dropdown-content::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8 !important;
+        }
+        
+        /* Already selected item style */
+        .ts-dropdown .option.selected:not(.active) {
+            background-color: #f1f5f9 !important;
+            font-weight: 600 !important;
+            color: #4361ee !important;
+        }
+        
+        /* Placeholder styling */
+        .ts-control > input::placeholder {
+            color: #94a3b8 !important;
+            opacity: 0.9 !important;
+            font-size: 16px !important;
+            font-weight: 400 !important;
+        }
+        
+        /* Focus and selected state for dropdown */
+        .ts-dropdown .selected {
+            background-color: #eff6ff !important;
+            color: #1e40af !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Create layout control */
+        .ts-wrapper.single .ts-control {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-right: 40px !important; /* Space for arrow */
+        }
+        
+        /* When the dropdown is open */
+        .ts-wrapper.dropdown-active .ts-control {
+            border-color: #4361ee !important;
+            background-color: #ffffff !important;
+        }
+        
+        /* Dropdown headers for better categorization */
+        .ts-dropdown .create {
+            color: rgba(37, 99, 235, 0.75) !important;
+            padding: 12px 16px !important;
+        }
+        
+        /* Loading indicator */
+        .ts-wrapper.loading .ts-control::before {
+            border-color: #4361ee transparent transparent transparent !important;
+        }
+        
+        /* Disable item styling */
+        .ts-dropdown .option.disabled {
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+        }
+        
+        /* Empty notice */
+        .ts-dropdown .no-results {
+            padding: 12px 16px !important;
+            color: #64748b !important;
+            background-color: #f8fafc !important;
+            border-radius: 8px !important;
+            margin: 4px 0 !important;
+            font-style: italic !important;
+        }
+        
+        /* Improve focus outline */
+        .ts-wrapper.focus .ts-control {
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.15) !important;
+            border-color: #4361ee !important;
+        }
+        
+        /* Gradient text class */
+        .text-gradient {
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
-            color: transparent;
-            margin-bottom: 0.5rem;
-        }
-
-        .runs-label {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .probability-container {
-            flex: 1.5;
-            margin: 0 2rem;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 20px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .probability-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            text-align: center;
-            margin-bottom: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .probability-bar-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .probability-value {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            width: 4rem;
-            text-align: center;
-        }
-
-        .probability-bar {
-            flex: 1;
-            height: 1rem;
-            background: rgba(226, 232, 240, 0.5);
-            border-radius: 9999px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .probability-fill {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background: var(--primary-color); /* Fallback color */
-            background-image: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
-            border-radius: 9999px;
-            transition: width 0.5s ease;
-        }
-
-        .odds-breakdown {
-            background: rgba(238, 242, 255, 0.8);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-top: 2rem;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .odds-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .odds-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-        }
-
-        .odds-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-            transition: all 0.3s ease;
-        }
-
-        .odds-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-        }
-
-        .odds-card-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .odds-values {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .odds-team {
-            text-align: center;
-        }
-
-        .odds-team-name {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        .odds-value {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        .total-odds {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .total-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .total-value {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-
-        .total-odds-value {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .error {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            color: #dc2626;
-            padding: 1.5rem;
-            border-radius: 12px;
-            font-size: 0.875rem;
-            margin-top: 1.5rem;
-            border: 1px solid #fecaca;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--border-color);
-            border-top: 4px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            background-image: linear-gradient(135deg, #4361ee, #4cc9f0);
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .loading-text {
-            margin-top: 1.5rem;
-            color: var(--text-secondary);
-            font-size: 1rem;
-            font-weight: 500;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin: 1rem;
-                border-radius: 16px;
-            }
-
-            .content {
-                padding: 1.5rem;
-            }
-
-            .prediction-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .team-name {
-                font-size: 1.25rem;
-            }
-
-            .prediction-value {
-                font-size: 1.25rem;
-            }
-        }
     </style>
 </head>
-<body>
-    <div class="page-background"></div>
-    <div class="page-overlay"></div>
-    <div class="container">
-        <div class="header">
-            <h1>College Baseball Odds Hub</h1>
+<body class="min-h-screen font-sans flex justify-center items-center p-4 md:p-8 bg-primaryDark">
+    <div class="page-background fixed inset-0 bg-gradient-to-br from-primary to-secondary opacity-90 -z-20"></div>
+    <div class="page-overlay fixed inset-0 bg-black bg-opacity-30 -z-10"></div>
+    
+    <div class="container w-full max-w-4xl bg-white bg-opacity-98 rounded-3xl shadow-2xl overflow-hidden relative z-10 backdrop-blur-md mt-0 md:-mt-12">
+        <div class="h-1.5 w-full bg-gradient-to-r from-primary to-secondary"></div>
+        
+        <div class="bg-gradient-to-r from-primary to-secondary text-white p-6 md:p-10 text-center relative overflow-hidden">
+            <h1 class="text-2xl md:text-4xl font-bold text-white mb-2 relative z-10">College Baseball Odds Hub</h1>
         </div>
-        <div class="content">
-            <form id="prediction-form" method="POST" action="/">
-                <div class="teams-row">
-                    <div class="form-group">
-                        <label for="away_team">Away Team</label>
-                        <select id="away_team" name="away_team" required>
-                            <option value="">Select Away Team</option>
+        
+        <div class="p-4 md:p-10 bg-gradient-to-br from-white to-gray-50 relative z-10">
+            <form id="prediction-form" method="POST" action="/" class="bg-white p-4 md:p-8 rounded-2xl shadow mb-8">
+                <div class="flex flex-col md:flex-row items-start gap-2 md:gap-2">
+                    <div class="w-full md:w-[47%]">
+                        <label for="away_team" class="block text-xs font-semibold text-textPrimary uppercase tracking-wider mb-2">Away Team</label>
+                        <select id="away_team" name="away_team" required class="w-full">
                         </select>
                     </div>
                     
-                    <div class="separator">@</div>
+                    <div class="flex items-center justify-center py-2 md:py-0 w-full md:w-[6%] md:self-center md:mt-4">
+                        <span class="px-2 text-2xl font-bold text-[black]">@</span>
+                    </div>
                     
-                    <div class="form-group">
-                        <label for="home_team">Home Team</label>
-                        <select id="home_team" name="home_team" required>
-                            <option value="">Select Home Team</option>
+                    <div class="w-full md:w-[47%]">
+                        <label for="home_team" class="block text-xs font-semibold text-textPrimary uppercase tracking-wider mb-2">Home Team</label>
+                        <select id="home_team" name="home_team" required class="w-full">
                         </select>
                     </div>
                 </div>
                 
-                <button type="submit" id="predict-button" disabled>Predict</button>
+                <div class="mt-8 flex justify-center">
+                    <button id="predict-button" type="submit" disabled 
+                        class="bg-gradient-to-r from-primary to-secondary text-white py-2.5 px-16 text-lg font-semibold rounded-xl cursor-pointer transition duration-300 uppercase tracking-wider shadow-md hover:shadow-lg hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto md:min-w-[300px]">
+                        Predict
+                    </button>
+                </div>
             </form>
 
-            <div id="loading" class="loading">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">Calculating prediction...</div>
+            <div id="loading" class="hidden text-center py-12">
+                <div class="inline-block w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+                <div class="mt-6 text-textSecondary text-base font-medium">Calculating prediction...</div>
             </div>
 
             <div id="prediction-result"></div>
 
             {% if error %}
-            <div class="error">{{ error }}</div>
+            <div class="bg-red-50 text-red-600 p-6 rounded-xl text-sm mt-6 border border-red-200 shadow-sm">{{ error }}</div>
             {% endif %}
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- Replace Select2 with Tom Select JS -->
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script>
-        $(document).ready(function() {
+        document.addEventListener('DOMContentLoaded', function() {
             const teams = [
                 "North Carolina", "Florida St", "Florida", "Clemson", "LSU", "Oregon St", "Arkansas", "Georgia",
                 "Oklahoma", "Texas", "Alabama", "Vanderbilt", "Auburn", "Oklahoma St", "Coastal Car", "Oregon",
@@ -641,167 +418,179 @@
                 "Alcorn St"
             ];
 
-            function populateSelect(selectElement) {
+            // Tom Select initialization
+            const homeSelectEl = document.getElementById('home_team');
+            const awaySelectEl = document.getElementById('away_team');
+            
+            // Add teams as options to the select elements
                 teams.forEach(team => {
-                    const option = new Option(team, team);
-                    selectElement.append(option);
-                });
-            }
-
-            const homeSelect = $('#home_team');
-            const awaySelect = $('#away_team');
-            populateSelect(homeSelect);
-            populateSelect(awaySelect);
-
-            $('#home_team, #away_team').select2({
-                placeholder: "Select a team",
-                allowClear: true,
-                width: '100%'
+                const homeOption = new Option(team, team);
+                const awayOption = new Option(team, team);
+                homeSelectEl.add(homeOption);
+                awaySelectEl.add(awayOption);
             });
 
-            function updateOptions() {
-                const homeValue = homeSelect.val();
-                const awayValue = awaySelect.val();
+            // Initialize Tom Select
+            const homeSelect = new TomSelect('#home_team', {
+                create: false,
+                allowEmptyOption: true
+            });
+            
+            const awaySelect = new TomSelect('#away_team', {
+                create: false,
+                allowEmptyOption: true
+            });
 
-                // Destroy and reinitialize to prevent select2 issues
-                homeSelect.select2('destroy');
-                awaySelect.select2('destroy');
-
-                $('option', homeSelect).prop('disabled', false);
-                $('option', awaySelect).prop('disabled', false);
-
-                if (homeValue) {
-                    $(`option[value="${homeValue}"]`, awaySelect).prop('disabled', true);
-                }
-                if (awayValue) {
-                    $(`option[value="${awayValue}"]`, homeSelect).prop('disabled', true);
-                }
-
-                // Update predict button state
-                $('#predict-button').prop('disabled', !homeValue || !awayValue);
-
-                // Reinitialize with configurations
-                homeSelect.select2({
-                    placeholder: "Select a team",
-                    allowClear: true,
-                    width: '100%'
-                });
+            // Set default selections on initialization
+            setTimeout(() => {
+                // Set default values - select popular teams
+                homeSelect.setValue('LSU');
+                awaySelect.setValue('Texas');
                 
-                awaySelect.select2({
-                    placeholder: "Select a team",
-                    allowClear: true,
-                    width: '100%'
-                });
+                // Update button state since we have both teams selected
+                document.getElementById('predict-button').disabled = false;
+            }, 100);
+
+            // Function to update options and button state
+            function updateOptions() {
+                const homeValue = homeSelect.getValue();
+                const awayValue = awaySelect.getValue();
+
+                // Clear disabled options
+                homeSelect.refreshOptions(false);
+                awaySelect.refreshOptions(false);
+
+                // Disable selected options in other dropdown
+                if (homeValue) {
+                    awaySelect.removeOption(homeValue, true);
+                }
+                
+                if (awayValue) {
+                    homeSelect.removeOption(awayValue, true);
+                }
+
+                // Update button state
+                document.getElementById('predict-button').disabled = !homeValue || !awayValue;
             }
 
+            // Event listeners for select changes
             homeSelect.on('change', updateOptions);
             awaySelect.on('change', updateOptions);
 
             // Handle form submission with AJAX
-            $('#prediction-form').on('submit', function(e) {
+            document.getElementById('prediction-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
                 const formData = {
-                    home_team: $('#home_team').val(),
-                    away_team: $('#away_team').val()
+                    home_team: homeSelect.getValue(),
+                    away_team: awaySelect.getValue()
                 };
 
                 // Show loading spinner
-                $('#loading').show();
-                $('#prediction-result').empty();
+                document.getElementById('loading').classList.remove('hidden');
+                document.getElementById('loading').classList.add('flex');
+                document.getElementById('prediction-result').innerHTML = '';
 
                 // Make AJAX call
-                $.ajax({
-                    url: '/',
+                fetch('/', {
                     method: 'POST',
-                    data: formData,
                     headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    success: function(response) {
-                        $('#loading').hide();
+                    body: new URLSearchParams(formData)
+                })
+                .then(response => response.json())
+                .then(response => {
+                    document.getElementById('loading').classList.remove('flex');
+                    document.getElementById('loading').classList.add('hidden');
                         
                         if (response.error) {
-                            $('#prediction-result').html(`
-                                <div class="error">${response.error}</div>
-                            `);
+                        document.getElementById('prediction-result').innerHTML = `
+                            <div class="bg-red-50 text-red-600 p-6 rounded-xl text-sm mt-6 border border-red-200 shadow-sm">${response.error}</div>
+                        `;
                             return;
                         }
 
                         const prediction = response.prediction;
                         const html = `
-                            <div class="prediction">
-                                <div class="prediction-header">Match Forecast</div>
-                                <div class="prediction-content">
-                                    <div class="teams-container">
-                                        <div class="team-info">
-                                            <div class="team-name">${formData.away_team}</div>
-                                            <div class="expected-runs">${prediction.PredictedMeans.away_mean}</div>
-                                            <div class="runs-label">Expected Runs</div>
+                        <div class="bg-white bg-opacity-95 rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl border border-gray-100 backdrop-blur-md">
+                            <div class="bg-gradient-to-r from-primary to-secondary text-white p-4 text-2xl font-bold uppercase tracking-wider relative overflow-hidden">
+                                Match Forecast
+                            </div>
+                            <div class="p-6 md:p-10 bg-gradient-to-br from-white to-gray-50">
+                                <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+                                    <div class="w-full md:w-1/3 text-center p-4 md:p-8 bg-white bg-opacity-80 rounded-2xl shadow-md backdrop-blur-md border border-white border-opacity-20 transition-all duration-300 hover:translate-y-[-2px] hover:shadow-lg">
+                                        <div class="text-lg md:text-xl font-bold text-textPrimary mb-4 uppercase tracking-wider">${formData.away_team}</div>
+                                        <div class="text-4xl md:text-5xl font-extrabold text-gradient mb-2">${prediction.PredictedMeans.away_mean}</div>
+                                        <div class="text-sm text-textSecondary uppercase tracking-wider">Expected Runs</div>
                                         </div>
                                         
-                                        <div class="probability-container">
-                                            <div class="probability-title">Win Probability</div>
-                                            <div class="probability-bar-container">
-                                                <div class="probability-value">${prediction.WinProbabilities.away_win_probability}%</div>
-                                                <div class="probability-bar">
-                                                    <div class="probability-fill" style="width: ${prediction.WinProbabilities.away_win_probability}%"></div>
-                                                </div>
-                                                <div class="probability-value">${prediction.WinProbabilities.home_win_probability}%</div>
+                                    <div class="w-full md:w-1/3 p-4 md:p-8 bg-white bg-opacity-80 rounded-2xl shadow-md backdrop-blur-md border border-white border-opacity-20">
+                                        <div class="text-base font-semibold text-textPrimary text-center mb-6 uppercase tracking-wider">Win Probability</div>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div class="text-sm font-semibold text-textPrimary text-center w-16">${prediction.WinProbabilities.away_win_probability}%</div>
+                                            <div class="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden relative">
+                                                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500" style="width: ${prediction.WinProbabilities.away_win_probability}%"></div>
                                             </div>
-                                        </div>
-
-                                        <div class="team-info">
-                                            <div class="team-name">${formData.home_team}</div>
-                                            <div class="expected-runs">${prediction.PredictedMeans.home_mean}</div>
-                                            <div class="runs-label">Expected Runs</div>
+                                            <div class="text-sm font-semibold text-textPrimary text-center w-16">${prediction.WinProbabilities.home_win_probability}%</div>
                                         </div>
                                     </div>
 
-                                    <div class="odds-breakdown">
-                                        <div class="odds-title">Game Odds & Totals Breakdown</div>
-                                        <div class="odds-grid">
-                                            <div class="odds-card">
-                                                <div class="odds-card-title">Moneyline</div>
-                                                <div class="odds-values">
-                                                    <div class="odds-team">
-                                                        <div class="odds-team-name">${formData.away_team}</div>
-                                                        <div class="odds-value">${prediction.MoneyLine.away_decimal_odds}</div>
+                                    <div class="w-full md:w-1/3 text-center p-4 md:p-8 bg-white bg-opacity-80 rounded-2xl shadow-md backdrop-blur-md border border-white border-opacity-20 transition-all duration-300 hover:translate-y-[-2px] hover:shadow-lg">
+                                        <div class="text-lg md:text-xl font-bold text-textPrimary mb-4 uppercase tracking-wider">${formData.home_team}</div>
+                                        <div class="text-4xl md:text-5xl font-extrabold text-gradient mb-2">${prediction.PredictedMeans.home_mean}</div>
+                                        <div class="text-sm text-textSecondary uppercase tracking-wider">Expected Runs</div>
+                                    </div>
                                                     </div>
-                                                    <div class="odds-team">
-                                                        <div class="odds-team-name">${formData.home_team}</div>
-                                                        <div class="odds-value">${prediction.MoneyLine.home_decimal_odds}</div>
+
+                                <div class="bg-indigo-50 bg-opacity-80 rounded-2xl p-4 md:p-8 backdrop-blur-md border border-white border-opacity-20 mt-8">
+                                    <div class="text-xl font-bold text-primary mb-6 uppercase tracking-wider">Game Odds & Totals Breakdown</div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="bg-white p-6 rounded-xl shadow-sm transition-all duration-300 hover:translate-y-[-2px] hover:shadow-md">
+                                            <div class="text-sm font-semibold text-textSecondary mb-4 uppercase tracking-wider">Moneyline</div>
+                                            <div class="flex justify-between items-center">
+                                                <div class="text-center">
+                                                    <div class="text-xs text-textSecondary mb-2">${formData.away_team}</div>
+                                                    <div class="text-xl font-bold text-primary">${prediction.MoneyLine.away_decimal_odds}</div>
                                                     </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-textSecondary mb-2">${formData.home_team}</div>
+                                                    <div class="text-xl font-bold text-primary">${prediction.MoneyLine.home_decimal_odds}</div>
                                                 </div>
                                             </div>
-                                            <div class="odds-card">
-                                                <div class="odds-card-title">Game Total: ${prediction.OverUnder.total_line}</div>
-                                                <div class="total-odds">
+                                        </div>
+                                        <div class="bg-white p-6 rounded-xl shadow-sm transition-all duration-300 hover:translate-y-[-2px] hover:shadow-md">
+                                            <div class="text-sm font-semibold text-textSecondary mb-4 uppercase tracking-wider">Game Total: ${prediction.OverUnder.total_line}</div>
+                                            <div class="flex justify-between items-center">
                                                     <div>
-                                                        <div class="total-label">Over</div>
-                                                        <div class="total-value">${prediction.OverUnder.over_probability_percent}%</div>
+                                                    <div class="text-xs text-textSecondary">Over</div>
+                                                    <div class="text-base font-semibold text-primary">${prediction.OverUnder.over_probability_percent}%</div>
                                                     </div>
-                                                    <div class="total-odds-value">(${prediction.OverUnder.over_decimal_odds})</div>
+                                                <div class="text-sm text-textSecondary">(${prediction.OverUnder.over_decimal_odds})</div>
                                                     <div>
-                                                        <div class="total-label">Under</div>
-                                                        <div class="total-value">${prediction.OverUnder.under_probability_percent}%</div>
-                                                    </div>
-                                                    <div class="total-odds-value">(${prediction.OverUnder.under_decimal_odds})</div>
+                                                    <div class="text-xs text-textSecondary">Under</div>
+                                                    <div class="text-base font-semibold text-primary">${prediction.OverUnder.under_probability_percent}%</div>
                                                 </div>
+                                                <div class="text-sm text-textSecondary">(${prediction.OverUnder.under_decimal_odds})</div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    `;
+                    document.getElementById('prediction-result').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('loading').classList.remove('flex');
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('prediction-result').innerHTML = `
+                        <div class="bg-red-50 text-red-600 p-6 rounded-xl text-sm mt-6 border border-red-200 shadow-sm">
+                            An error occurred while processing your request. Please try again.
+                            </div>
                         `;
-                        $('#prediction-result').html(html);
-                    },
-                    error: function(xhr, status, error) {
-                        $('#loading').hide();
-                        $('#prediction-result').html(`
-                            <div class="error">An error occurred while processing your request. Please try again.</div>
-                        `);
-                    }
+                    console.error("AJAX Error:", error);
                 });
             });
         });
