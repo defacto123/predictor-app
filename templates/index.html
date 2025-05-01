@@ -28,6 +28,11 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             min-height: 100vh;
@@ -37,12 +42,12 @@
             padding: 2rem;
             position: relative;
             margin: 0;
-            background: linear-gradient(135deg, #1a1c2e 0%, #2d3748 100%);
+            background: linear-gradient(135deg, #1a1c2e 0%, #2d3748 100%) fixed;
         }
 
         body::before {
             content: '';
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
@@ -61,6 +66,7 @@
             position: relative;
             z-index: 1;
             backdrop-filter: blur(10px);
+            margin-top: -3rem;
         }
 
         .container::before {
@@ -76,7 +82,7 @@
         .header {
             background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
             color: white;
-            padding: 3rem 2rem;
+            padding: 2.5rem 2rem;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -104,6 +110,8 @@
         .content {
             padding: 3rem;
             background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            position: relative;
+            z-index: 10;
         }
 
         .separator {
@@ -519,7 +527,7 @@
                     </div>
                 </div>
                 
-                <button type="submit">Predict</button>
+                <button type="submit" id="predict-button" disabled>Predict</button>
             </form>
 
             <div id="loading" class="loading">
@@ -606,6 +614,10 @@
                 const homeValue = homeSelect.val();
                 const awayValue = awaySelect.val();
 
+                // Destroy and reinitialize to prevent select2 issues
+                homeSelect.select2('destroy');
+                awaySelect.select2('destroy');
+
                 $('option', homeSelect).prop('disabled', false);
                 $('option', awaySelect).prop('disabled', false);
 
@@ -616,8 +628,21 @@
                     $(`option[value="${awayValue}"]`, homeSelect).prop('disabled', true);
                 }
 
-                homeSelect.select2();
-                awaySelect.select2();
+                // Update predict button state
+                $('#predict-button').prop('disabled', !homeValue || !awayValue);
+
+                // Reinitialize with configurations
+                homeSelect.select2({
+                    placeholder: "Select a team",
+                    allowClear: true,
+                    width: '100%'
+                });
+                
+                awaySelect.select2({
+                    placeholder: "Select a team",
+                    allowClear: true,
+                    width: '100%'
+                });
             }
 
             homeSelect.on('change', updateOptions);
@@ -641,6 +666,9 @@
                     url: '/',
                     method: 'POST',
                     data: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                     success: function(response) {
                         $('#loading').hide();
                         

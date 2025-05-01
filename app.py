@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import logging
 import os
 import google.cloud.storage
@@ -360,12 +360,21 @@ def predict_score():
             home_team = request.form.get('home_team')
             away_team = request.form.get('away_team')
             logger.info(f"POST request - Home: {home_team}, Away: {away_team}")
+            
+            # Check if request is AJAX (via content type or custom header)
+            is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.content_type == 'application/x-www-form-urlencoded'
+            
             if home_team and away_team:
                 result = predictor.predict(home_team, away_team)
                 if result is None:
+                    error_msg = f"Prediction failed. One or both teams not found in the dataset."
                     logger.warning(f"Prediction failed for {home_team} vs {away_team}")
-                    return render_template('index.html', error=f"Prediction failed. One or both teams not found in the dataset.", 
-                                         home_team=home_team, away_team=away_team)
+                    if is_ajax:
+                        return jsonify({"error": error_msg})
+                    else:
+                        return render_template('index.html', error=error_msg, 
+                                             home_team=home_team, away_team=away_team)
+                
                 logger.info(f"Prediction result: {result}")
                 # Format prediction to match index.html expectations
                 prediction = {
@@ -389,17 +398,28 @@ def predict_score():
                         'under_decimal_odds': f"{result['OverUnder']['UnderDecimalOdds']:.2f}"
                     }
                 }
-                return render_template('index.html', 
-                                     prediction=prediction,
-                                     home_team=home_team, 
-                                     away_team=away_team)
+                
+                if is_ajax:
+                    return jsonify({"prediction": prediction})
+                else:
+                    return render_template('index.html', 
+                                         prediction=prediction,
+                                         home_team=home_team, 
+                                         away_team=away_team)
             else:
+                error_msg = "Please provide both home and away team names"
                 logger.warning("Missing team names in POST request")
-                return render_template('index.html', error="Please provide both home and away team names")
+                if is_ajax:
+                    return jsonify({"error": error_msg})
+                else:
+                    return render_template('index.html', error=error_msg)
+                    
         logger.info("Serving GET request")
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Request handling failed: {str(e)}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": f"Server error: {str(e)}"}), 500
         return f"Server error: {str(e)}", 500
 
 if __name__ == "__main__":
