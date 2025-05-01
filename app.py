@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 logger.info("Logging initialized at startup - Cloud Run Predictor app")
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', static_folder='static')
 
 def download_blob(bucket_name, source_blob_name, destination_file_name):
     try:
@@ -421,6 +421,34 @@ def predict_score():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": f"Server error: {str(e)}"}), 500
         return f"Server error: {str(e)}", 500
+
+@app.route('/favicon.ico')
+def favicon():
+    return app.send_static_file('favicon.ico')
+
+@app.route('/favicon-16x16.png')
+def favicon_16():
+    return app.send_static_file('favicon-16x16.png')
+
+@app.route('/favicon-32x32.png')
+def favicon_32():
+    return app.send_static_file('favicon-32x32.png')
+
+@app.route('/apple-touch-icon.png')
+def apple_touch_icon():
+    return app.send_static_file('apple-touch-icon.png')
+
+@app.route('/android-chrome-192x192.png')
+def android_chrome_192():
+    return app.send_static_file('android-chrome-192x192.png')
+
+@app.route('/android-chrome-512x512.png')
+def android_chrome_512():
+    return app.send_static_file('android-chrome-512x512.png')
+
+@app.route('/site.webmanifest')
+def site_webmanifest():
+    return app.send_static_file('site.webmanifest')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
