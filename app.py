@@ -276,6 +276,10 @@ class TeamScorePredictor:
                 'HomeMean': float(adjusted_home),
                 'AwayMean': float(adjusted_away)
             },
+            'WinProbabilities': {
+                'HomeWinProbability': float(home_moneyline * 100),
+                'AwayWinProbability': float(away_moneyline * 100)
+            },
             'MoneyLine': {
                 'HomeDecimalOdds': float(home_decimal_odds),
                 'AwayDecimalOdds': float(away_decimal_odds)
@@ -360,6 +364,10 @@ def predict_score():
                     'PredictedMeans': {
                         'home_mean': f"{result['PredictedMeans']['HomeMean']:.2f}",
                         'away_mean': f"{result['PredictedMeans']['AwayMean']:.2f}"
+                    },
+                    'WinProbabilities': {
+                        'home_win_probability': f"{result['WinProbabilities']['HomeWinProbability']:.2f}",
+                        'away_win_probability': f"{result['WinProbabilities']['AwayWinProbability']:.2f}"
                     },
                     'MoneyLine': {
                         'home_decimal_odds': f"{result['MoneyLine']['HomeDecimalOdds']:.2f}",

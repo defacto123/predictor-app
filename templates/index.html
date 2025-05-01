@@ -5,128 +5,534 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Team Score Predictor</title>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-dark: #3730a3;
+            --secondary-color: #06b6d4;
+            --success-color: #10b981;
+            --info-color: #3b82f6;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --gradient-start: #4f46e5;
+            --gradient-end: #06b6d4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f9;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
             margin: 0;
+            background: linear-gradient(135deg, #1a1c2e 0%, #2d3748 100%);
         }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
+            z-index: 0;
+        }
+
         .container {
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 1000px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            padding: 3rem 2rem;
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 28px;
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.5;
         }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .content {
+            padding: 3rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .separator {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 0 0.5rem;
+            display: flex;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+
         form {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            position: relative;
         }
+
+        .teams-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
         label {
-            font-size: 16px;
-            color: #555;
-            text-align: left;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
+
         .select2-container {
             width: 100% !important;
         }
+
         .select2-container--default .select2-selection--single {
-            height: 42px;
-            padding: 6px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            height: 52px;
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            background-color: var(--card-background);
+            transition: all 0.2s ease;
         }
+
+        .select2-container--default .select2-selection--single:hover {
+            border-color: var(--primary-color);
+        }
+
         .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 40px;
+            height: 50px;
+            width: 2.5rem;
+            right: 0rem;
         }
+
         button {
-            background-color: #4CAF50;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
             color: white;
-            padding: 12px;
-            font-size: 16px;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
             border: none;
-            border-radius: 5px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: background-color 0.3s;
-            margin-top: 10px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
+
         button:hover {
-            background-color: #45a049;
+            filter: brightness(1.2);
         }
+
         .prediction {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #e8f5e9;
-            border-radius: 5px;
-            color: #2e7d32;
-            font-size: 16px;
-            text-align: left;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.2);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        .prediction h3 {
-            margin-top: 0;
-            font-size: 18px;
-            color: #1b5e20;
+
+        .prediction:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
         }
-        .prediction p {
-            margin: 5px 0;
+
+        .prediction-header {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            padding: 1rem;
+            font-size: 1.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: relative;
+            overflow: hidden;
         }
+
+        .prediction-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .prediction-content {
+            padding: 2.5rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+        }
+
+        .teams-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .team-info {
+            flex: 1;
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .team-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        .team-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .expected-runs {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .runs-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .probability-container {
+            flex: 1.5;
+            margin: 0 2rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .probability-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .probability-bar-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .probability-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            width: 4rem;
+            text-align: center;
+        }
+
+        .probability-bar {
+            flex: 1;
+            height: 1rem;
+            background: rgba(226, 232, 240, 0.5);
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .probability-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+            border-radius: 9999px;
+            transition: width 0.5s ease;
+        }
+
+        .odds-breakdown {
+            background: rgba(238, 242, 255, 0.8);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .odds-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .odds-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .odds-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .odds-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        .odds-card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .odds-values {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .odds-team {
+            text-align: center;
+        }
+
+        .odds-team-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .odds-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .total-odds {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .total-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .total-odds-value {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
         .error {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #ffebee;
-            border-radius: 5px;
-            color: #c62828;
-            font-size: 18px;
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #dc2626;
+            padding: 1.5rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            margin-top: 1.5rem;
+            border: 1px solid #fecaca;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 1rem;
+                border-radius: 16px;
+            }
+
+            .content {
+                padding: 1.5rem;
+            }
+
+            .prediction-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .team-name {
+                font-size: 1.25rem;
+            }
+
+            .prediction-value {
+                font-size: 1.25rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Team Score Predictor</h1>
-        <form method="POST" action="/">
-            <label for="home_team">Home Team</label>
-            <select id="home_team" name="home_team" required>
-                <option value="">Select Home Team</option>
-            </select>
-            
-            <label for="away_team">Away Team</label>
-            <select id="away_team" name="away_team" required>
-                <option value="">Select Away Team</option>
-            </select>
-            
-            <button type="submit">Predict</button>
-        </form>
-        {% if prediction %}
-            <div class="prediction">
-                <h3>Prediction Results</h3>
-                <p><strong>{{ home_team }}</strong> Predicted Mean: {{ prediction.PredictedMeans.home_mean }}</p>
-                <p><strong>{{ away_team }}</strong> Predicted Mean: {{ prediction.PredictedMeans.away_mean }}</p>
-                <h3>MoneyLine Odds</h3>
-                <p>{{ home_team }} Decimal Odds: {{ prediction.MoneyLine.home_decimal_odds }}</p>
-                <p>{{ away_team }} Decimal Odds: {{ prediction.MoneyLine.away_decimal_odds }}</p>
-                <h3>Over/Under</h3>
-                <p>Total Line: {{ prediction.OverUnder.total_line }}</p>
-                <p>Over Probability: {{ prediction.OverUnder.over_probability_percent }}%</p>
-                <p>Under Probability: {{ prediction.OverUnder.under_probability_percent }}%</p>
-                <p>Over Decimal Odds: {{ prediction.OverUnder.over_decimal_odds }}</p>
-                <p>Under Decimal Odds: {{ prediction.OverUnder.under_decimal_odds }}</p>
+        <div class="header">
+            <h1>Team Score Predictor</h1>
+        </div>
+        <div class="content">
+            <form id="prediction-form" method="POST" action="/">
+                <div class="teams-row">
+                    <div class="form-group">
+                        <label for="away_team">Away Team</label>
+                        <select id="away_team" name="away_team" required>
+                            <option value="">Select Away Team</option>
+                        </select>
+                    </div>
+                    
+                    <div class="separator">@</div>
+                    
+                    <div class="form-group">
+                        <label for="home_team">Home Team</label>
+                        <select id="home_team" name="home_team" required>
+                            <option value="">Select Home Team</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit">Predict</button>
+            </form>
+
+            <div id="loading" class="loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Calculating prediction...</div>
             </div>
-        {% endif %}
-        {% if error %}
+
+            <div id="prediction-result"></div>
+
+            {% if error %}
             <div class="error">{{ error }}</div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -216,6 +622,111 @@
 
             homeSelect.on('change', updateOptions);
             awaySelect.on('change', updateOptions);
+
+            // Handle form submission with AJAX
+            $('#prediction-form').on('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    home_team: $('#home_team').val(),
+                    away_team: $('#away_team').val()
+                };
+
+                // Show loading spinner
+                $('#loading').show();
+                $('#prediction-result').empty();
+
+                // Make AJAX call
+                $.ajax({
+                    url: '/',
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        $('#loading').hide();
+                        
+                        if (response.error) {
+                            $('#prediction-result').html(`
+                                <div class="error">${response.error}</div>
+                            `);
+                            return;
+                        }
+
+                        const prediction = response.prediction;
+                        const html = `
+                            <div class="prediction">
+                                <div class="prediction-header">Match Forecast</div>
+                                <div class="prediction-content">
+                                    <div class="teams-container">
+                                        <div class="team-info">
+                                            <div class="team-name">${formData.away_team}</div>
+                                            <div class="expected-runs">${prediction.PredictedMeans.away_mean}</div>
+                                            <div class="runs-label">Expected Runs</div>
+                                        </div>
+                                        
+                                        <div class="probability-container">
+                                            <div class="probability-title">Win Probability</div>
+                                            <div class="probability-bar-container">
+                                                <div class="probability-value">${prediction.WinProbabilities.away_win_probability}%</div>
+                                                <div class="probability-bar">
+                                                    <div class="probability-fill" style="width: ${prediction.WinProbabilities.away_win_probability}%"></div>
+                                                </div>
+                                                <div class="probability-value">${prediction.WinProbabilities.home_win_probability}%</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="team-info">
+                                            <div class="team-name">${formData.home_team}</div>
+                                            <div class="expected-runs">${prediction.PredictedMeans.home_mean}</div>
+                                            <div class="runs-label">Expected Runs</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="odds-breakdown">
+                                        <div class="odds-title">Game Odds & Totals Breakdown</div>
+                                        <div class="odds-grid">
+                                            <div class="odds-card">
+                                                <div class="odds-card-title">Moneyline</div>
+                                                <div class="odds-values">
+                                                    <div class="odds-team">
+                                                        <div class="odds-team-name">${formData.away_team}</div>
+                                                        <div class="odds-value">${prediction.MoneyLine.away_decimal_odds}</div>
+                                                    </div>
+                                                    <div class="odds-team">
+                                                        <div class="odds-team-name">${formData.home_team}</div>
+                                                        <div class="odds-value">${prediction.MoneyLine.home_decimal_odds}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="odds-card">
+                                                <div class="odds-card-title">Game Total: ${prediction.OverUnder.total_line}</div>
+                                                <div class="total-odds">
+                                                    <div>
+                                                        <div class="total-label">Over</div>
+                                                        <div class="total-value">${prediction.OverUnder.over_probability_percent}%</div>
+                                                    </div>
+                                                    <div class="total-odds-value">(${prediction.OverUnder.over_decimal_odds})</div>
+                                                    <div>
+                                                        <div class="total-label">Under</div>
+                                                        <div class="total-value">${prediction.OverUnder.under_probability_percent}%</div>
+                                                    </div>
+                                                    <div class="total-odds-value">(${prediction.OverUnder.under_decimal_odds})</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        $('#prediction-result').html(html);
+                    },
+                    error: function(xhr, status, error) {
+                        $('#loading').hide();
+                        $('#prediction-result').html(`
+                            <div class="error">An error occurred while processing your request. Please try again.</div>
+                        `);
+                    }
+                });
+            });
         });
     </script>
 </body>
