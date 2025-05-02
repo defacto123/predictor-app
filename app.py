@@ -347,7 +347,7 @@ try:
     with open(SCALER_PATH, 'rb') as f:
         predictor.scaler = pickle.load(f)
         logger.info(f"Scaler mean: {predictor.scaler.mean_}, scale: {predictor.scaler.scale_}")
-    with open(TARGET_SCALER_PATH, 'rb') as"f:
+    with open(TARGET_SCALER_PATH, 'rb') as f:
         predictor.target_scaler = pickle.load(f)
         logger.info(f"Target scaler mean: {predictor.target_scaler.mean_}, scale: {predictor.target_scaler.scale_}")
     logger.info("Predictor initialized successfully")
