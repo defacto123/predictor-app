@@ -433,12 +433,17 @@
             function updateOptions() {
                 const homeValue = homeSelect.getValue();
                 const awayValue = awaySelect.getValue();
-
-                // Clear disabled options
-                homeSelect.refreshOptions(false);
-                awaySelect.refreshOptions(false);
-
-                // Disable selected options in other dropdown
+                
+                homeSelect.clearOptions();
+                awaySelect.clearOptions();
+                
+                // Add all teams back to both dropdowns
+                teams.forEach(team => {
+                    homeSelect.addOption({value: team, text: team});
+                    awaySelect.addOption({value: team, text: team});
+                });
+                
+                // Now remove the opposing team from each dropdown
                 if (homeValue) {
                     awaySelect.removeOption(homeValue, true);
                 }
