@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template, jsonify
 import logging
 import os
+import shutil
 import google.cloud.storage
 import pandas as pd
 import numpy as np
@@ -207,6 +208,7 @@ class TeamScorePredictor:
             self.team_encoder[home_team],
             self.team_encoder[away_team]
         ]
+        logger.info(f"Features for {home_team} vs {away_team}: {features}")
         return np.array(features).reshape(1, -1)
 
     def calculate_moneyline_probabilities(self, home_mean, away_mean):
@@ -250,7 +252,7 @@ class TeamScorePredictor:
         features_scaled = features.copy()
         features_scaled[:, :23] = self.scaler.transform(features[:, :23])
 
-        with tf.device('/GPU:0'):
+        with tf.device('/CPU:0'):  # Use CPU to avoid GPU-related differences
             prediction_scaled = self.model.predict(features_scaled, verbose=0)
             prediction = self.target_scaler.inverse_transform(prediction_scaled)
 
@@ -280,7 +282,7 @@ class TeamScorePredictor:
         total_mean = adjusted_home + adjusted_away
         total_line, over_prob_percent, under_prob_percent, over_decimal_odds, under_decimal_odds = self.calculate_over_under_probabilities(total_mean)
 
-        return {
+        result = {
             'PredictedMeans': {
                 'HomeMean': float(adjusted_home),
                 'AwayMean': float(adjusted_away)
@@ -299,6 +301,8 @@ class TeamScorePredictor:
                 'UnderDecimalOdds': float(under_decimal_odds)
             }
         }
+        logger.info(f"Raw prediction for {home_team} vs {away_team}: {result}")
+        return result
 
 # Initialize predictor at startup
 predictor = None
@@ -310,15 +314,19 @@ TARGET_SCALER_PATH = '/tmp/target_scaler.pkl'
 
 logger.info("Starting predictor initialization")
 try:
-    if not os.path.exists(MODEL_PATH):
-        download_blob(BUCKET_NAME, 'team_score_predictor_model.keras', MODEL_PATH)
-    if not os.path.exists(DATA_PATH):
-        download_blob(BUCKET_NAME, 'massey_all_data.csv', DATA_PATH)
-    if not os.path.exists(SCALER_PATH):
-        download_blob(BUCKET_NAME, 'scaler.pkl', SCALER_PATH)
-    if not os.path.exists(TARGET_SCALER_PATH):
-        download_blob(BUCKET_NAME, 'target_scaler.pkl', TARGET_SCALER_PATH)
+    # Clear /tmp/ to avoid using cached files
+    if os.path.exists('/tmp'):
+        shutil.rmtree('/tmp')
+    os.makedirs('/tmp')
+    logger.info("Cleared /tmp directory and recreated it")
 
+    # Always download files from bucket
+    download_blob(BUCKET_NAME, 'team_score_predictor_model.keras', MODEL_PATH)
+    download_blob(BUCKET_NAME, 'massey_all_data.csv', DATA_PATH)
+    download_blob(BUCKET_NAME, 'scaler.pkl', SCALER_PATH)
+    download_blob(BUCKET_NAME, 'target_scaler.pkl', TARGET_SCALER_PATH)
+
+    # Verify files exist
     if not os.path.exists(MODEL_PATH):
         raise FileNotFoundError(f"Model file not found at {MODEL_PATH} after download")
     if not os.path.exists(DATA_PATH):
@@ -338,9 +346,14 @@ try:
     logger.info("Loading scalers")
     with open(SCALER_PATH, 'rb') as f:
         predictor.scaler = pickle.load(f)
-    with open(TARGET_SCALER_PATH, 'rb') as f:
+        logger.info(f"Scaler mean: {predictor.scaler.mean_}, scale: {predictor.scaler.scale_}")
+    with open(TARGET_SCALER_PATH, 'rb') as"f:
         predictor.target_scaler = pickle.load(f)
+        logger.info(f"Target scaler mean: {predictor.target_scaler.mean_}, scale: {predictor.target_scaler.scale_}")
     logger.info("Predictor initialized successfully")
+
+    # Log library versions
+    logger.info(f"TensorFlow: {tf.__version__}, NumPy: {np.__version__}, Pandas: {pd.__version__}, Scikit-learn: {sklearn.__version__}")
 except Exception as e:
     logger.error(f"Startup failed: {str(e)}")
     raise SystemExit(f"Startup failed: {str(e)}")
@@ -361,7 +374,7 @@ def predict_score():
             away_team = request.form.get('away_team')
             logger.info(f"POST request - Home: {home_team}, Away: {away_team}")
             
-            # Check if request is AJAX (via content type or custom header)
+            # Check if request is AJAX
             is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.content_type == 'application/x-www-form-urlencoded'
             
             if home_team and away_team:
@@ -375,7 +388,6 @@ def predict_score():
                         return render_template('index.html', error=error_msg, 
                                              home_team=home_team, away_team=away_team)
                 
-                logger.info(f"Prediction result: {result}")
                 # Format prediction to match index.html expectations
                 prediction = {
                     'PredictedMeans': {
