@@ -1,0 +1,14 @@
+{
+  "name": "baseball-predictor",
+  "version": "1.0.0",
+  "description": "College Baseball Prediction Script",
+  "main": "predict_games.js",
+  "scripts": {
+    "start": "node predict_games.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0"
+  }
+} 
