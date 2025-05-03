@@ -8,7 +8,7 @@ const { createObjectCsvWriter } = require('csv-writer');
 
 // Configuration
 const CSV_FILE_PATH = path.join(__dirname, '..', 'model', 'games.csv');
-const API_URL = 'https://predict-score-misho-761671483637.us-central1.run.app'; // Change this if your Flask app is running on a different port/host
+const API_URL = 'https://predict-score-baseball-761671483637.us-central1.run.app'; // Change this if your Flask app is running on a different port/host
 
 /**
  * Load games from CSV file
