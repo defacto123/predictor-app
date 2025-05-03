@@ -1,20 +1,20 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, send_from_directory
 import logging
 import os
-import shutil
 import google.cloud.storage
 import pandas as pd
 import numpy as np
 import tensorflow as tf
 import pickle
 from scipy.stats import poisson
-from math import ceil, floor
+from sklearn.preprocessing import StandardScaler
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 logger.info("Logging initialized at startup - Cloud Run Predictor app")
 
+# Configure Flask to serve static files
 app = Flask(__name__, static_url_path='', static_folder='static')
 
 def download_blob(bucket_name, source_blob_name, destination_file_name):
@@ -107,7 +107,8 @@ class TeamScorePredictor:
             self.team_stats[home_team]['dates'].append(row['Date'])
             self.team_stats[away_team]['dates'].append(row['Date'])
             self.team_stats[home_team]['home_scores'].append(row['HomeActualScore'])
-            self.team_stats[away_team]['away_scores'].append(row['HomeActualScore'])
+            # Fix: Use AwayActualScore for away_scores, matching Colab predictor
+            self.team_stats[away_team]['away_scores'].append(row['AwayActualScore'])
             self.team_stats[home_team]['conf_scores'][row['AwayConference']].append(row['HomeActualScore'])
             self.team_stats[away_team]['conf_scores'][row['HomeConference']].append(row['AwayActualScore'])
             self.team_stats[home_team]['win_prob'].append(row['HomeWinProbability'])
@@ -208,7 +209,6 @@ class TeamScorePredictor:
             self.team_encoder[home_team],
             self.team_encoder[away_team]
         ]
-        logger.info(f"Features for {home_team} vs {away_team}: {features}")
         return np.array(features).reshape(1, -1)
 
     def calculate_moneyline_probabilities(self, home_mean, away_mean):
@@ -250,11 +250,28 @@ class TeamScorePredictor:
             return None
 
         features_scaled = features.copy()
+        # Apply scaler to first 23 features and validate
         features_scaled[:, :23] = self.scaler.transform(features[:, :23])
+        # Validate scaling: mean should be close to 0, std close to 1
+        # Relax thresholds to account for potential data differences
+        scaled_mean = np.mean(features_scaled[:, :23])
+        scaled_std = np.std(features_scaled[:, :23])
+        logger.info(f"Scaled features validation - Mean: {scaled_mean:.6f}, Std: {scaled_std:.6f}")
+        if abs(scaled_mean) > 0.5 or abs(scaled_std - 1.0) > 0.5:
+            logger.warning("Scaler validation warning: Scaled features mean or std deviates significantly from expected (mean ~0, std ~1)")
 
-        with tf.device('/CPU:0'):  # Use CPU to avoid GPU-related differences
+        with tf.device('/GPU:0'):
             prediction_scaled = self.model.predict(features_scaled, verbose=0)
             prediction = self.target_scaler.inverse_transform(prediction_scaled)
+
+        # Validate target scaler by transforming and inverse-transforming a sample value
+        sample_value = np.array([[5.0, 5.0]])  # Example prediction-like value
+        sample_scaled = self.target_scaler.transform(sample_value)
+        sample_unscaled = self.target_scaler.inverse_transform(sample_scaled)
+        diff = np.max(np.abs(sample_value - sample_unscaled))
+        logger.info(f"Target scaler validation - Max difference after transform/inverse_transform: {diff:.6f}")
+        if diff > 1e-5:
+            logger.warning(f"Target scaler validation warning: Inverse transform difference too large: {diff}")
 
         home_conf = self.team_stats[home_team]['conference']
         away_conf = self.team_stats[away_team]['conference']
@@ -282,7 +299,7 @@ class TeamScorePredictor:
         total_mean = adjusted_home + adjusted_away
         total_line, over_prob_percent, under_prob_percent, over_decimal_odds, under_decimal_odds = self.calculate_over_under_probabilities(total_mean)
 
-        result = {
+        return {
             'PredictedMeans': {
                 'HomeMean': float(adjusted_home),
                 'AwayMean': float(adjusted_away)
@@ -301,8 +318,6 @@ class TeamScorePredictor:
                 'UnderDecimalOdds': float(under_decimal_odds)
             }
         }
-        logger.info(f"Raw prediction for {home_team} vs {away_team}: {result}")
-        return result
 
 # Initialize predictor at startup
 predictor = None
@@ -314,13 +329,7 @@ TARGET_SCALER_PATH = '/tmp/target_scaler.pkl'
 
 logger.info("Starting predictor initialization")
 try:
-    # Clear /tmp/ to avoid using cached files
-    if os.path.exists('/tmp'):
-        shutil.rmtree('/tmp')
-    os.makedirs('/tmp')
-    logger.info("Cleared /tmp directory and recreated it")
-
-    # Always download files from bucket
+    # Always download files from bucket (files will overwrite existing ones in /tmp/)
     download_blob(BUCKET_NAME, 'team_score_predictor_model.keras', MODEL_PATH)
     download_blob(BUCKET_NAME, 'massey_all_data.csv', DATA_PATH)
     download_blob(BUCKET_NAME, 'scaler.pkl', SCALER_PATH)
@@ -346,14 +355,21 @@ try:
     logger.info("Loading scalers")
     with open(SCALER_PATH, 'rb') as f:
         predictor.scaler = pickle.load(f)
-        logger.info(f"Scaler mean: {predictor.scaler.mean_}, scale: {predictor.scaler.scale_}")
+        # Validate scaler object
+        if not isinstance(predictor.scaler, StandardScaler):
+            raise ValueError("Loaded scaler is not a StandardScaler instance")
+        if not hasattr(predictor.scaler, 'mean_') or not hasattr(predictor.scaler, 'scale_'):
+            raise ValueError("Scaler missing mean_ or scale_ attributes")
+        logger.info(f"Scaler parameters - Mean: {predictor.scaler.mean_}, Scale: {predictor.scaler.scale_}")
     with open(TARGET_SCALER_PATH, 'rb') as f:
         predictor.target_scaler = pickle.load(f)
-        logger.info(f"Target scaler mean: {predictor.target_scaler.mean_}, scale: {predictor.target_scaler.scale_}")
+        # Validate target scaler object
+        if not isinstance(predictor.target_scaler, StandardScaler):
+            raise ValueError("Loaded target scaler is not a StandardScaler instance")
+        if not hasattr(predictor.target_scaler, 'mean_') or not hasattr(predictor.target_scaler, 'scale_'):
+            raise ValueError("Target scaler missing mean_ or scale_ attributes")
+        logger.info(f"Target scaler parameters - Mean: {predictor.target_scaler.mean_}, Scale: {predictor.target_scaler.scale_}")
     logger.info("Predictor initialized successfully")
-
-    # Log library versions
-    logger.info(f"TensorFlow: {tf.__version__}, NumPy: {np.__version__}, Pandas: {pd.__version__}, Scikit-learn: {sklearn.__version__}")
 except Exception as e:
     logger.error(f"Startup failed: {str(e)}")
     raise SystemExit(f"Startup failed: {str(e)}")
@@ -373,22 +389,20 @@ def predict_score():
             home_team = request.form.get('home_team')
             away_team = request.form.get('away_team')
             logger.info(f"POST request - Home: {home_team}, Away: {away_team}")
-            
-            # Check if request is AJAX
-            is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.content_type == 'application/x-www-form-urlencoded'
-            
+
+            # Check if the request is an AJAX request
+            is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
             if home_team and away_team:
                 result = predictor.predict(home_team, away_team)
                 if result is None:
-                    error_msg = f"Prediction failed. One or both teams not found in the dataset."
                     logger.warning(f"Prediction failed for {home_team} vs {away_team}")
+                    error_msg = "Prediction failed. One or both teams not found in the dataset."
                     if is_ajax:
                         return jsonify({"error": error_msg})
-                    else:
-                        return render_template('index.html', error=error_msg, 
-                                             home_team=home_team, away_team=away_team)
-                
-                # Format prediction to match index.html expectations
+                    return render_template('index.html', error=error_msg, home_team=home_team, away_team=away_team)
+
+                logger.info(f"Prediction result: {result}")
                 prediction = {
                     'PredictedMeans': {
                         'home_mean': f"{result['PredictedMeans']['HomeMean']:.2f}",
@@ -410,22 +424,17 @@ def predict_score():
                         'under_decimal_odds': f"{result['OverUnder']['UnderDecimalOdds']:.2f}"
                     }
                 }
-                
+
                 if is_ajax:
                     return jsonify({"prediction": prediction})
-                else:
-                    return render_template('index.html', 
-                                         prediction=prediction,
-                                         home_team=home_team, 
-                                         away_team=away_team)
+                return render_template('index.html', prediction=prediction, home_team=home_team, away_team=away_team)
             else:
-                error_msg = "Please provide both home and away team names"
                 logger.warning("Missing team names in POST request")
+                error_msg = "Please provide both home and away team names"
                 if is_ajax:
                     return jsonify({"error": error_msg})
-                else:
-                    return render_template('index.html', error=error_msg)
-                    
+                return render_template('index.html', error=error_msg)
+        
         logger.info("Serving GET request")
         return render_template('index.html')
     except Exception as e:
@@ -434,33 +443,22 @@ def predict_score():
             return jsonify({"error": f"Server error: {str(e)}"}), 500
         return f"Server error: {str(e)}", 500
 
-@app.route('/favicon.ico')
-def favicon():
-    return app.send_static_file('favicon.ico')
-
-@app.route('/favicon-16x16.png')
-def favicon_16():
-    return app.send_static_file('favicon-16x16.png')
-
-@app.route('/favicon-32x32.png')
-def favicon_32():
-    return app.send_static_file('favicon-32x32.png')
+# Add routes for static files (e.g., site.webmanifest)
+@app.route('/site.webmanifest')
+def site_webmanifest():
+    return send_from_directory(app.static_folder, 'site.webmanifest')
 
 @app.route('/apple-touch-icon.png')
 def apple_touch_icon():
-    return app.send_static_file('apple-touch-icon.png')
+    return send_from_directory(app.static_folder, 'apple-touch-icon.png')
 
-@app.route('/android-chrome-192x192.png')
-def android_chrome_192():
-    return app.send_static_file('android-chrome-192x192.png')
+@app.route('/favicon-16x16.png')
+def favicon_16():
+    return send_from_directory(app.static_folder, 'favicon-16x16.png')
 
-@app.route('/android-chrome-512x512.png')
-def android_chrome_512():
-    return app.send_static_file('android-chrome-512x512.png')
-
-@app.route('/site.webmanifest')
-def site_webmanifest():
-    return app.send_static_file('site.webmanifest')
+@app.route('/favicon-32x32.png')
+def favicon_32():
+    return send_from_directory(app.static_folder, 'favicon-32x32.png')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
