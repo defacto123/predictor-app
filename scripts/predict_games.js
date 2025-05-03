@@ -123,12 +123,12 @@ async function main() {
       path: resultsFile,
       header: [
         { id: 'date', title: 'Date' },
-        { id: 'awayTeam', title: 'AwayTeam' },
         { id: 'homeTeam', title: 'HomeTeam' },
-        { id: 'awayMean', title: 'AwayMean' },
+        { id: 'awayTeam', title: 'AwayTeam' },
         { id: 'homeMean', title: 'HomeMean' },
-        { id: 'awayWinProb', title: 'AwayWinProb' },
+        { id: 'awayMean', title: 'AwayMean' },
         { id: 'homeWinProb', title: 'HomeWinProb' },
+        { id: 'awayWinProb', title: 'AwayWinProb' },
         { id: 'totalLine', title: 'TotalLine' },
         { id: 'overProb', title: 'OverProb' },
         { id: 'underProb', title: 'UnderProb' }
